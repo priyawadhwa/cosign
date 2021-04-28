@@ -16,11 +16,16 @@
 package cosign
 
 import (
+	"crypto"
+	"crypto/ecdsa"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
+	_ "embed" // To enable the `go:embed` directive.
+
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -39,6 +44,10 @@ const (
 	ServerEnv       = "REKOR_SERVER"
 	rekorServer     = "https://api.rekor.dev"
 )
+
+// This is the rekor public key
+//go:embed rekor.pub
+var rekorPub string
 
 func Experimental() bool {
 	if b, err := strconv.ParseBool(os.Getenv(ExperimentalEnv)); err == nil {
@@ -69,10 +78,10 @@ func DestinationRef(ref name.Reference, img *remote.Descriptor) (name.Reference,
 }
 
 // Upload will upload the signature, public key and payload to the tlog
-func UploadTLog(signature, payload []byte, pemBytes []byte) (string, error) {
+func UploadTLog(signature, payload []byte, pemBytes []byte) (*models.LogEntryAnon, error) {
 	rekorClient, err := app.GetRekorClient(TlogServer())
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	re := rekorEntry(payload, signature, pemBytes)
@@ -93,17 +102,67 @@ func UploadTLog(signature, payload []byte, pemBytes []byte) (string, error) {
 			uuid := uriSplit[len(uriSplit)-1]
 			index, err := VerifyTLogEntry(rekorClient, uuid)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			return strconv.FormatInt(index, 10), nil
 		}
 		return "", err
+	}
+
+	// verify the log entry
+	payload := resp.GetPayload()
+	if len(payload) != 1 {
+		return nil, fmt.Errorf("expected length 1")
+	}
+	var logEntry *models.LogEntryAnon
+	for _, v := range payload {
+		logEntry = v
+	}
+
+	// verify the logEntry against rekor's public key
+	if err := verifySignedEntryTimestamp(logEntry); err != nil {
+		fmt.Println("Unable to verify signed entry timestamp")
 	}
 	// UUID is at the end of location
 	for _, p := range resp.Payload {
 		return strconv.FormatInt(*p.LogIndex, 10), nil
 	}
 	return "", errors.New("bad response from server")
+}
+
+func verifySignedEntryTimestamp(logEntry *models.LogEntryAnon) error {
+	if logEntry.Verification == nil {
+		return fmt.Errorf("no verification provided")
+	}
+	set := logEntry.Verification.SignedEntryTimestamp
+	// set verification to nil
+	logEntry.Verification = nil
+	payload, err := logEntry.MarshalBinary()
+	if err != nil {
+		return errors.Wrap(err, "marshalling")
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	if err != nil {
+		return errors.Wrap(err, "canonicalizing")
+	}
+
+	publicKey, err := PemToECDSAKey([]byte(rekorPub))
+	if err != nil {
+		return errors.Wrap(err, "load public key")
+	}
+
+	// verify the signature against the public key
+	h := crypto.SHA256.New()
+	if _, err := h.Write(canonicalized); err != nil {
+		return errors.Wrap(err, "write payload")
+	}
+	sum := h.Sum(nil)
+
+	if !ecdsa.VerifyASN1(publicKey, sum, []byte(set)) {
+		return errors.Wrap(err, "verify asn1")
+	}
+
+	return nil
 }
 
 func rekorEntry(payload, signature, pubKey []byte) rekord_v001.V001Entry {

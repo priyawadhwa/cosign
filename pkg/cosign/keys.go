@@ -119,6 +119,26 @@ func CertToPem(c *x509.Certificate) []byte {
 	})
 }
 
+func PemToECDSAKey(raw []byte) (*ecdsa.PublicKey, error) {
+	p, _ := pem.Decode(raw)
+	if p == nil {
+		return nil, errors.New("pem.Decode failed")
+	}
+	if p.Type != pubKeyPemType {
+		return nil, fmt.Errorf("not public: %q", p.Type)
+	}
+
+	decoded, err := x509.ParsePKIXPublicKey(p.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	ed, ok := decoded.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("invalid public key: was %T, require *ecdsa.PublicKey", raw)
+	}
+	return ed, nil
+}
+
 func LoadECDSAPrivateKey(key []byte, pass []byte) (signature.ECDSASignerVerifier, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
@@ -178,21 +198,9 @@ func LoadPublicKey(ctx context.Context, keyRef string) (pub PublicKey, err error
 	}
 
 	// PEM encoded file.
-	p, _ := pem.Decode(raw)
-	if p == nil {
-		return nil, errors.New("pem.Decode failed")
-	}
-	if p.Type != pubKeyPemType {
-		return nil, fmt.Errorf("not public: %q", p.Type)
-	}
-
-	decoded, err := x509.ParsePKIXPublicKey(p.Bytes)
+	ed, err := PemToECDSAKey(raw)
 	if err != nil {
 		return nil, err
-	}
-	ed, ok := decoded.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("invalid public key: was %T, require *ecdsa.PublicKey", pub)
 	}
 	return signature.ECDSAVerifier{Key: ed, HashAlg: crypto.SHA256}, nil
 }
