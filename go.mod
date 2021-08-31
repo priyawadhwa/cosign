@@ -3,6 +3,7 @@ module github.com/sigstore/cosign
 go 1.16
 
 require (
+	cloud.google.com/go/kms v0.1.0 // indirect
 	cloud.google.com/go/storage v1.16.0
 	github.com/Azure/go-autorest/autorest/adal v0.9.14 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
@@ -28,9 +29,8 @@ require (
 	golang.org/x/mod v0.5.0 // indirect
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210809222454-d867a43fc93e // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
-	google.golang.org/api v0.54.0
+	google.golang.org/api v0.55.0
 	k8s.io/api v0.22.1
 	k8s.io/apimachinery v0.22.1
 	k8s.io/client-go v0.22.1
