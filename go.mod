@@ -18,7 +18,7 @@ require (
 	github.com/manifoldco/promptui v0.8.0
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/open-policy-agent/opa v0.31.0
-	github.com/peterbourgon/ff/v3 v3.1.0
+	github.com/peterbourgon/ff/v3 v3.1.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.30.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
