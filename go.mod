@@ -36,11 +36,10 @@ require (
 	golang.org/x/sys v0.0.0-20210831042530-f4d43177bf5e // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/api v0.56.0
 	k8s.io/api v0.22.1
 	k8s.io/apimachinery v0.22.1
 	k8s.io/client-go v0.22.1
-	k8s.io/klog/v2 v2.10.0
+	k8s.io/klog/v2 v2.30.0
 	sigs.k8s.io/controller-runtime v0.9.6
 )
 
