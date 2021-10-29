@@ -17,7 +17,7 @@ require (
 	github.com/in-toto/in-toto-golang v0.2.1-0.20210806133539-f50646681592
 	github.com/manifoldco/promptui v0.8.0
 	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/open-policy-agent/opa v0.31.0
+	github.com/open-policy-agent/opa v0.34.0
 	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.30.0 // indirect
