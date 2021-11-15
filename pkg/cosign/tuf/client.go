@@ -251,7 +251,7 @@ func GetTarget(ctx context.Context, name string, out client.Destination) error {
 	return getTargetHelper(name, out, c)
 }
 
-func getRootKeys(rootFileBytes []byte) ([]*data.Key, int, error) {
+func getRootKeys(rootFileBytes []byte) ([]*data.PublicKey, int, error) {
 	store := tuf.MemoryStore(map[string]json.RawMessage{"root.json": rootFileBytes}, nil)
 	repo, err := tuf.NewRepo(store)
 	if err != nil {
