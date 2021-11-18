@@ -302,12 +302,18 @@ func downloadRemoteTarget(name string, c *client.Client, out client.Destination)
 
 // Instantiates the global TUF client. Uses the embedded (by default trusted) root in cosign
 // unless a custom root is provided. This will always perform a remote call to update.
-func Init(ctx context.Context, rootBytes []byte, remote client.RemoteStore, threshold int) error {
-	rootClient, err := RootClient(ctx, remote, rootBytes)
+func Init(ctx context.Context, altRootBytes []byte, remote client.RemoteStore, threshold int) error {
+	rootClient, err := RootClient(ctx, remote, altRootBytes)
 	if err != nil {
 		return errors.Wrap(err, "initializing root client")
 	}
-	rootKeys, rootThreshold, err := getRootKeys(rootBytes)
+	if altRootBytes == nil {
+		altRootBytes, err = GetEmbeddedRoot()
+		if err != nil {
+			return err
+		}
+	}
+	rootKeys, rootThreshold, err := getRootKeys(altRootBytes)
 	if err != nil {
 		return errors.Wrap(err, "retrieving root keys")
 	}
