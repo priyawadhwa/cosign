@@ -16,7 +16,6 @@
 * [cosign attach](cosign_attach.md)	 - Provides utilities for attaching artifacts to other artifacts in a registry
 * [cosign attest](cosign_attest.md)	 - Attest the supplied container image.
 * [cosign clean](cosign_clean.md)	 - Remove all signatures from an image.
-cosign clean <image uri>
 * [cosign completion](cosign_completion.md)	 - Generate completion script
 * [cosign copy](cosign_copy.md)	 - Copy the supplied container image and signatures.
 * [cosign dockerfile](cosign_dockerfile.md)	 - Provides utilities for discovering images in and performing operations on Dockerfiles
@@ -32,7 +31,6 @@ cosign clean <image uri>
 * [cosign sign](cosign_sign.md)	 - Sign the supplied container image.
 * [cosign sign-blob](cosign_sign-blob.md)	 - Sign the supplied blob, outputting the base64-encoded signature to stdout.
 * [cosign triangulate](cosign_triangulate.md)	 - Outputs the located cosign image reference. This is the location cosign stores the specified artifact type.
-cosign triangulate <image uri>
 * [cosign upload](cosign_upload.md)	 - Provides utilities for uploading artifacts to a registry
 * [cosign verify](cosign_verify.md)	 - Verify a signature on the supplied container image
 * [cosign verify-attestation](cosign_verify-attestation.md)	 - Verify an attestation on the supplied container image
