@@ -238,6 +238,12 @@ func TestValidateCronJob(t *testing.T) {
 		},
 	}, metav1.CreateOptions{})
 
+	fr := fulcioRoots
+	defer func() { fulcioRoots = fr }()
+	fulcioRoots = func() *x509.CertPool {
+		return nil
+	}
+
 	v := NewValidator(ctx, secretName)
 
 	cvs := cosignVerifySignatures
