@@ -24,20 +24,22 @@ import (
 
 	"github.com/sigstore/cosign/internal/pkg/cosign"
 	cosignv1 "github.com/sigstore/cosign/pkg/cosign"
+	pkgbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
+
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
-func bundle(entry *models.LogEntryAnon) *oci.Bundle {
+func bundle(entry *models.LogEntryAnon) *pkgbundle.Bundle {
 	if entry.Verification == nil {
 		return nil
 	}
-	return &oci.Bundle{
+	return &pkgbundle.Bundle{
 		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
-		Payload: oci.BundlePayload{
+		Payload: pkgbundle.BundlePayload{
 			Body:           entry.Body,
 			IntegratedTime: *entry.IntegratedTime,
 			LogIndex:       *entry.LogIndex,
@@ -48,7 +50,7 @@ func bundle(entry *models.LogEntryAnon) *oci.Bundle {
 
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(rekorBytes []byte, rClient *client.Rekor, upload tlogUploadFn) (*oci.Bundle, error) {
+func uploadToTlog(rekorBytes []byte, rClient *client.Rekor, upload tlogUploadFn) (*pkgbundle.Bundle, error) {
 	entry, err := upload(rClient, rekorBytes)
 	if err != nil {
 		return nil, err

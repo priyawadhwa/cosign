@@ -33,8 +33,8 @@ import (
 	"github.com/sigstore/cosign/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/sigstore/cosign/pkg/cosign/attestation"
+	pkgbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
-	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -47,13 +47,13 @@ import (
 )
 
 // TODO(dekkagaijin): remove this in favor of a function in pkg which handles both signatures and attestations
-func bundle(entry *models.LogEntryAnon) *oci.Bundle {
+func bundle(entry *models.LogEntryAnon) *pkgbundle.Bundle {
 	if entry.Verification == nil {
 		return nil
 	}
-	return &oci.Bundle{
+	return &pkgbundle.Bundle{
 		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
-		Payload: oci.BundlePayload{
+		Payload: pkgbundle.BundlePayload{
 			Body:           entry.Body,
 			IntegratedTime: *entry.IntegratedTime,
 			LogIndex:       *entry.LogIndex,
@@ -64,7 +64,7 @@ func bundle(entry *models.LogEntryAnon) *oci.Bundle {
 
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*oci.Bundle, error) {
+func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*pkgbundle.Bundle, error) {
 	var rekorBytes []byte
 	// Upload the cert or the public key, depending on what we have
 	if sv.Cert != nil {
