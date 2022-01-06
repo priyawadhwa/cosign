@@ -667,7 +667,7 @@ func bundleHash(bundleBody, signature string) (string, string, error) {
 	return *hrekordObj.Data.Hash.Algorithm, *hrekordObj.Data.Hash.Value, nil
 }
 
-func VerifySET(bundlePayload bundle.BundlePayload, signature []byte, pub *ecdsa.PublicKey) error {
+func VerifySET(bundlePayload bundle.RekorPayload, signature []byte, pub *ecdsa.PublicKey) error {
 	contents, err := json.Marshal(bundlePayload)
 	if err != nil {
 		return errors.Wrap(err, "marshaling")

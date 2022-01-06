@@ -262,7 +262,7 @@ func verifyTLogEntry(ctx context.Context, rekorClient *client.Rekor, uuid string
 		return nil, errors.Wrap(err, "rekor public key pem to ecdsa")
 	}
 
-	payload := bundle.BundlePayload{
+	payload := bundle.RekorPayload{
 		Body:           e.Body,
 		IntegratedTime: *e.IntegratedTime,
 		LogIndex:       *e.LogIndex,

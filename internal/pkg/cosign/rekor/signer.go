@@ -33,30 +33,15 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
-func bundle(entry *models.LogEntryAnon) *pkgbundle.Bundle {
-	if entry.Verification == nil {
-		return nil
-	}
-	return &pkgbundle.Bundle{
-		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
-		Payload: pkgbundle.BundlePayload{
-			Body:           entry.Body,
-			IntegratedTime: *entry.IntegratedTime,
-			LogIndex:       *entry.LogIndex,
-			LogID:          *entry.LogID,
-		},
-	}
-}
-
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(rekorBytes []byte, rClient *client.Rekor, upload tlogUploadFn) (*pkgbundle.Bundle, error) {
+func uploadToTlog(rekorBytes []byte, rClient *client.Rekor, upload tlogUploadFn) (*pkgbundle.RekorBundle, error) {
 	entry, err := upload(rClient, rekorBytes)
 	if err != nil {
 		return nil, err
 	}
 	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-	return bundle(entry), nil
+	return pkgbundle.EntryToBundle(entry), nil
 }
 
 // signerWrapper calls a wrapped, inner signer then uploads either the Cert or Pub(licKey) of the results to Rekor, then adds the resulting `Bundle`

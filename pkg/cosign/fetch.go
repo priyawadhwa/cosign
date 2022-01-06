@@ -34,7 +34,7 @@ type SignedPayload struct {
 	Payload         []byte
 	Cert            *x509.Certificate
 	Chain           []*x509.Certificate
-	Bundle          *bundle.Bundle
+	Bundle          *bundle.RekorBundle
 }
 
 type Signatures struct {

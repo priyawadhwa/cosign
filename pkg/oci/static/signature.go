@@ -106,7 +106,7 @@ func (l *staticLayer) Chain() ([]*x509.Certificate, error) {
 }
 
 // Bundle implements oci.Signature
-func (l *staticLayer) Bundle() (*bundle.Bundle, error) {
+func (l *staticLayer) Bundle() (*bundle.RekorBundle, error) {
 	return l.opts.Bundle, nil
 }
 

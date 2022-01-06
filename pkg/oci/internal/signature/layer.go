@@ -105,12 +105,12 @@ func (s *sigLayer) Chain() ([]*x509.Certificate, error) {
 }
 
 // Bundle implements oci.Signature
-func (s *sigLayer) Bundle() (*bundle.Bundle, error) {
+func (s *sigLayer) Bundle() (*bundle.RekorBundle, error) {
 	val := s.desc.Annotations[BundleKey]
 	if val == "" {
 		return nil, nil
 	}
-	var b bundle.Bundle
+	var b bundle.RekorBundle
 	if err := json.Unmarshal([]byte(val), &b); err != nil {
 		return nil, errors.Wrap(err, "unmarshaling bundle")
 	}

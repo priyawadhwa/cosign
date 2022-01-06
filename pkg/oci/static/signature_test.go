@@ -375,9 +375,9 @@ Ve/83WrFomwmNf056y1X48F9c4m3a3ozXAIxAKjRay5/aj/jsKKGIkmQatjI8uup
 Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 -----END CERTIFICATE-----
 `)
-		b = &bundle.Bundle{
+		b = &bundle.RekorBundle{
 			SignedEntryTimestamp: mustDecode("MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
-			Payload: bundle.BundlePayload{
+			Payload: bundle.RekorPayload{
 				Body:           "REMOVED",
 				IntegratedTime: 1631646761,
 				LogIndex:       693591,

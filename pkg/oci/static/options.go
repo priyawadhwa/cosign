@@ -29,7 +29,7 @@ type Option func(*options)
 type options struct {
 	LayerMediaType  types.MediaType
 	ConfigMediaType types.MediaType
-	Bundle          *bundle.Bundle
+	Bundle          *bundle.RekorBundle
 	Cert            []byte
 	Chain           []byte
 	Annotations     map[string]string
@@ -84,7 +84,7 @@ func WithAnnotations(ann map[string]string) Option {
 }
 
 // WithBundle sets the bundle to attach to the signature
-func WithBundle(b *bundle.Bundle) Option {
+func WithBundle(b *bundle.RekorBundle) Option {
 	return func(o *options) {
 		o.Bundle = b
 	}

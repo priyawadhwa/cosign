@@ -46,25 +46,9 @@ import (
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
-// TODO(dekkagaijin): remove this in favor of a function in pkg which handles both signatures and attestations
-func bundle(entry *models.LogEntryAnon) *pkgbundle.Bundle {
-	if entry.Verification == nil {
-		return nil
-	}
-	return &pkgbundle.Bundle{
-		SignedEntryTimestamp: entry.Verification.SignedEntryTimestamp,
-		Payload: pkgbundle.BundlePayload{
-			Body:           entry.Body,
-			IntegratedTime: *entry.IntegratedTime,
-			LogIndex:       *entry.LogIndex,
-			LogID:          *entry.LogID,
-		},
-	}
-}
-
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*pkgbundle.Bundle, error) {
+func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*pkgbundle.RekorBundle, error) {
 	var rekorBytes []byte
 	// Upload the cert or the public key, depending on what we have
 	if sv.Cert != nil {
@@ -86,7 +70,7 @@ func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string,
 		return nil, err
 	}
 	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-	return bundle(entry), nil
+	return pkgbundle.EntryToBundle(entry), nil
 }
 
 //nolint

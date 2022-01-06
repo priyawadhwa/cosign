@@ -58,5 +58,5 @@ type Signature interface {
 
 	// Bundle fetches the optional metadata that records the ephemeral
 	// Fulcio key in the transparency log.
-	Bundle() (*bundle.Bundle, error)
+	Bundle() (*bundle.RekorBundle, error)
 }

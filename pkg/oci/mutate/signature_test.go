@@ -291,9 +291,9 @@ func TestSignatureWithAnnotations(t *testing.T) {
 func TestSignatureWithBundle(t *testing.T) {
 	payload := "this is the TestSignatureWithBundle content!"
 	b64sig := "b64 content2="
-	b := &bundle.Bundle{
+	b := &bundle.RekorBundle{
 		SignedEntryTimestamp: mustBase64Decode(t, "MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
-		Payload: bundle.BundlePayload{
+		Payload: bundle.RekorPayload{
 			Body:           "REMOVED",
 			IntegratedTime: 1631646761,
 			LogIndex:       693591,
@@ -349,9 +349,9 @@ func TestSignatureWithEverything(t *testing.T) {
 		"foo":  "bar",
 		"test": "yes",
 	}
-	b := &bundle.Bundle{
+	b := &bundle.RekorBundle{
 		SignedEntryTimestamp: mustBase64Decode(t, "MEUCIQClUkUqZNf+6dxBc/pxq22JIluTB7Kmip1G0FIF5E0C1wIgLqXm+IM3JYW/P/qjMZSXW+J8bt5EOqNfe3R+0A9ooFE="),
-		Payload: bundle.BundlePayload{
+		Payload: bundle.RekorPayload{
 			Body:           "REMOVED",
 			IntegratedTime: 1631646761,
 			LogIndex:       693591,
