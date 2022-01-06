@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -26,6 +27,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	pkgbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/rekor"
@@ -44,6 +46,7 @@ type KeyOpts struct {
 	OIDCIssuer       string
 	OIDCClientID     string
 	OIDCClientSecret string
+	Bundle           string
 
 	// Modeled after InsecureSkipVerify in tls.Config, this disables
 	// verifying the SCT.
@@ -82,6 +85,10 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 		return nil, errors.Wrap(err, "signing blob")
 	}
 
+	bundle := pkgbundle.LocalBlob{
+		Signature: string(sig),
+	}
+
 	if options.EnableExperimental() {
 		rekorBytes, err = sv.Bytes(ctx)
 		if err != nil {
@@ -96,6 +103,20 @@ func SignBlobCmd(ctx context.Context, ko KeyOpts, regOpts options.RegistryOption
 			return nil, err
 		}
 		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
+		bundle.Rekor = pkgbundle.EntryToBundle(entry)
+	}
+
+	// if bundle is specified, just do that and ignore the rest
+	if ko.Bundle != "" {
+		if b64 {
+			bundle.Signature = base64.StdEncoding.EncodeToString(sig)
+			bundle.Cert = base64.StdEncoding.EncodeToString(rekorBytes)
+		}
+		contents, err := json.Marshal(bundle)
+		if err != nil {
+			return nil, err
+		}
+		return []byte(bundle.Signature), os.WriteFile(ko.Bundle, contents, 0600)
 	}
 
 	if outputSignature != "" {
