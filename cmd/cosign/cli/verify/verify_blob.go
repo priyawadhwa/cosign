@@ -128,19 +128,26 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 		if b.Cert == "" {
 			return fmt.Errorf("bundle does not contain cert for verification, please provide public key")
 		}
+		// cert can either be a cert or public key
 		certBytes := []byte(b.Cert)
 		if isb64(certBytes) {
 			certBytes, _ = base64.StdEncoding.DecodeString(b.Cert)
 		}
 		pubKey, err = loadCertFromPEM(certBytes)
 		if err != nil {
-			return err
+			// check if cert is actually a public key
+			pubKey, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
+			if err != nil {
+				return err
+			}
+		} else {
+			// do this if it is, indeed, a cert
+			certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(certBytes))
+			if err != nil {
+				return err
+			}
+			cert = certs[0]
 		}
-		certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(certBytes))
-		if err != nil {
-			return err
-		}
-		cert = certs[0]
 	case options.EnableExperimental():
 		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
