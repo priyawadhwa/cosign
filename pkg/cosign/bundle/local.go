@@ -14,10 +14,27 @@
 
 package bundle
 
+import (
+	"encoding/json"
+	"io/ioutil"
+)
+
 // The LocalBlob type holds all information required for verifying
 // a local blob
 type LocalBlob struct {
 	Signature string       `json:"signature"`
 	Rekor     *RekorBundle `json:"rekor,omitempty"`
 	Cert      string       `json:"cert,omitempty"`
+}
+
+func Load(path string) (*LocalBlob, error) {
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var b *LocalBlob
+	if err := json.Unmarshal(contents, &b); err != nil {
+		return nil, err
+	}
+	return b, nil
 }

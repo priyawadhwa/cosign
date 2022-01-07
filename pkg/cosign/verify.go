@@ -204,7 +204,7 @@ func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig
 	if err != nil {
 		return err
 	}
-	return checkExpiry(cert, time.Unix(*e.IntegratedTime, 0))
+	return CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
 }
 
 type fakeOCISignatures struct {
@@ -538,7 +538,7 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 	return checkedAttestations, bundleVerified, nil
 }
 
-func checkExpiry(cert *x509.Certificate, it time.Time) error {
+func CheckExpiry(cert *x509.Certificate, it time.Time) error {
 	ft := func(t time.Time) string {
 		return t.Format(time.RFC3339)
 	}
@@ -561,29 +561,13 @@ func VerifyBundle(ctx context.Context, sig oci.Signature) (bool, error) {
 		return false, nil
 	}
 
-	pub, err := GetRekorPub(ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "retrieving rekor public key")
-	}
-
-	rekorPubKey, err := PemToECDSAKey(pub)
-	if err != nil {
-		return false, errors.Wrap(err, "pem to ecdsa")
-	}
-
-	if err := VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, rekorPubKey); err != nil {
-		return false, err
-	}
-
 	cert, err := sig.Cert()
 	if err != nil {
 		return false, err
-	} else if cert == nil {
-		return true, nil
 	}
 
 	// verify the cert against the integrated time
-	if err := checkExpiry(cert, time.Unix(bundle.Payload.IntegratedTime, 0)); err != nil {
+	if err := CheckExpiry(cert, time.Unix(bundle.Payload.IntegratedTime, 0)); err != nil {
 		return false, errors.Wrap(err, "checking expiry on cert")
 	}
 

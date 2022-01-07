@@ -260,9 +260,12 @@ func loadCertFromFileOrURL(path string) (*signature.ECDSAVerifier, error) {
 	if err != nil {
 		return nil, err
 	}
+	return loadCertFromPEM(pems)
+}
 
+func loadCertFromPEM(pems []byte) (*signature.ECDSAVerifier, error) {
 	var out []byte
-	out, err = base64.StdEncoding.DecodeString(string(pems))
+	out, err := base64.StdEncoding.DecodeString(string(pems))
 	if err != nil {
 		// not a base64
 		out = pems

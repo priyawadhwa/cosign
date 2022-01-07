@@ -235,6 +235,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 				Sk:       o.SecurityKey.Use,
 				Slot:     o.SecurityKey.Slot,
 				RekorURL: o.Rekor.URL,
+				Bundle:   o.Bundle,
 			}
 			if err := verify.VerifyBlobCmd(cmd.Context(), ko, o.Cert, o.Signature, args[0]); err != nil {
 				return errors.Wrapf(err, "verifying blob %s", args)

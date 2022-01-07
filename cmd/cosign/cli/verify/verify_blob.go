@@ -26,6 +26,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
+
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
+	pkgbundle "github.com/sigstore/cosign/pkg/cosign/bundle"
 
 	"github.com/go-openapi/runtime"
 	"github.com/pkg/errors"
@@ -52,33 +56,31 @@ func isb64(data []byte) bool {
 	return err == nil
 }
 
+// VerifyBlob:
+// 1. Get the signature, both raw and encoded
+//        This can either be passed in or come from the bundle
+// 1a. Get the payload
+// 2. Get the signature verifier
+//        This can come from:
+//             1. User passes in public key
+//             2. User passes in cert file
+//             3. Cert exists in the bundle
+// 3. Try to verify the signature
+// 4. Try to verify the cert
+// 5. Try to verify the rekor entry if it exists in bundle
+// 6. OR, try to verify the rekor entry if experimental mode is enabled
 // nolint
 func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRef string) error {
 	var pubKey sigstoresigs.Verifier
-	var err error
 	var cert *x509.Certificate
 
-	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) && !options.EnableExperimental() {
+	if !options.OneOf(ko.KeyRef, ko.Sk, certRef) && !options.EnableExperimental() && ko.Bundle == "" {
 		return &options.PubKeyParseError{}
 	}
 
-	var b64sig string
-	if sigRef == "" {
-		return fmt.Errorf("missing flag '--signature'")
-	}
-	targetSig, err := blob.LoadFileOrURL(sigRef)
+	sig, b64Sig, err := signatures(sigRef, ko.Bundle)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			// ignore if file does not exist, it can be a base64 encoded string as well
-			return err
-		}
-		targetSig = []byte(sigRef)
-	}
-
-	if isb64(targetSig) {
-		b64sig = string(targetSig)
-	} else {
-		b64sig = base64.StdEncoding.EncodeToString(targetSig)
+		return err
 	}
 
 	var blobBytes []byte
@@ -117,6 +119,28 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 		if err != nil {
 			return err
 		}
+	case ko.Bundle != "":
+		fmt.Println("Verify the bundle here....")
+		b, err := pkgbundle.Load(ko.Bundle)
+		if err != nil {
+			return err
+		}
+		if b.Cert == "" {
+			return fmt.Errorf("bundle does not contain cert for verification, please provide public key")
+		}
+		certBytes := []byte(b.Cert)
+		if isb64(certBytes) {
+			certBytes, _ = base64.StdEncoding.DecodeString(b.Cert)
+		}
+		pubKey, err = loadCertFromPEM(certBytes)
+		if err != nil {
+			return err
+		}
+		certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(certBytes))
+		if err != nil {
+			return err
+		}
+		cert = certs[0]
 	case options.EnableExperimental():
 		rClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
@@ -137,7 +161,7 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 			return err
 		}
 
-		certs, err := extractCerts(tlogEntry)
+		certs, err := extractCerts(bundle.EntryToBundle(tlogEntry))
 		if err != nil {
 			return err
 		}
@@ -148,27 +172,35 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 		}
 	}
 
-	sig, err := base64.StdEncoding.DecodeString(b64sig)
-	if err != nil {
-		return err
-	}
-	if err := pubKey.VerifySignature(bytes.NewReader(sig), bytes.NewReader(blobBytes)); err != nil {
+	// Now we can finally do some verification!
+	// Verify the blob
+	if err := pubKey.VerifySignature(bytes.NewReader([]byte(sig)), bytes.NewReader(blobBytes)); err != nil {
 		return err
 	}
 
-	if cert != nil { // cert
-		if err := cosign.TrustedCert(cert, fulcio.GetRoots()); err != nil {
-			return err
-		}
-		fmt.Fprintln(os.Stderr, "Certificate is trusted by Fulcio Root CA")
-		fmt.Fprintln(os.Stderr, "Email:", cert.EmailAddresses)
-		for _, uri := range cert.URIs {
-			fmt.Fprintf(os.Stderr, "URI: %s://%s%s\n", uri.Scheme, uri.Host, uri.Path)
-		}
-		fmt.Fprintln(os.Stderr, "Issuer: ", sigs.CertIssuerExtension(cert))
+	// Verify the cert, if there is one
+	if err := verifyCert(cert); err != nil {
+		return err
+	}
+
+	// Verify the rekor entry
+	if err := verifyRekorEntry(ctx, ko, cert, pubKey, b64Sig, blobBytes); err != nil {
+		return err
 	}
 	fmt.Fprintln(os.Stderr, "Verified OK")
+	return nil
+}
 
+func verifyRekorEntry(ctx context.Context, ko sign.KeyOpts, cert *x509.Certificate, pubKey sigstoresigs.Verifier, b64sig string, blobBytes []byte) error {
+	// If we have a bundle with a rekor entry, let's first try to verify offline
+	if ko.Bundle != "" {
+		if err := verifyRekorBundle(ctx, ko.Bundle, cert); err == nil {
+			fmt.Fprintf(os.Stderr, "tlog entry verified offline\n")
+			return nil
+		}
+	}
+
+	// Otherwise, if experimental mode is enabled, check the tlog for verification
 	if options.EnableExperimental() {
 		rekorClient, err := rekor.NewClient(ko.RekorURL)
 		if err != nil {
@@ -194,12 +226,91 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, sigRef, blobRe
 		fmt.Fprintf(os.Stderr, "tlog entry verified with uuid: %q index: %d\n", uuid, index)
 		return nil
 	}
-
 	return nil
 }
 
-func extractCerts(e *models.LogEntryAnon) ([]*x509.Certificate, error) {
-	b, err := base64.StdEncoding.DecodeString(e.Body.(string))
+func verifyRekorBundle(ctx context.Context, bundlePath string, cert *x509.Certificate) error {
+	b, err := bundle.Load(bundlePath)
+	if err != nil {
+		return err
+	}
+	if b.Rekor == nil {
+		return fmt.Errorf("rekor entry is not available")
+	}
+	pub, err := cosign.GetRekorPub(ctx)
+	if err != nil {
+		return errors.Wrap(err, "retrieving rekor public key")
+	}
+
+	rekorPubKey, err := cosign.PemToECDSAKey(pub)
+	if err != nil {
+		return errors.Wrap(err, "pem to ecdsa")
+	}
+
+	if err := cosign.VerifySET(b.Rekor.Payload, b.Rekor.SignedEntryTimestamp, rekorPubKey); err != nil {
+		return err
+	}
+	if cert == nil {
+		return nil
+	}
+	it := time.Unix(b.Rekor.Payload.IntegratedTime, 0)
+	if err := cosign.CheckExpiry(cert, it); err != nil {
+		return err
+	}
+	return nil
+}
+
+func verifyCert(cert *x509.Certificate) error {
+	if cert == nil {
+		return nil
+	}
+	if err := cosign.TrustedCert(cert, fulcio.GetRoots()); err != nil {
+		return err
+	}
+	fmt.Fprintln(os.Stderr, "Certificate is trusted by Fulcio Root CA")
+	fmt.Fprintln(os.Stderr, "Email:", cert.EmailAddresses)
+	for _, uri := range cert.URIs {
+		fmt.Fprintf(os.Stderr, "URI: %s://%s%s\n", uri.Scheme, uri.Host, uri.Path)
+	}
+	fmt.Fprintln(os.Stderr, "Issuer: ", sigs.CertIssuerExtension(cert))
+	return nil
+}
+
+func signatures(sigRef string, bundle string) (sig, b64sig string, err error) {
+	var targetSig []byte
+	switch {
+	case sigRef != "":
+		targetSig, err = blob.LoadFileOrURL(sigRef)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				// ignore if file does not exist, it can be a base64 encoded string as well
+				return "", "", err
+			}
+			targetSig = []byte(sigRef)
+		}
+	case bundle != "":
+		b, err := pkgbundle.Load(bundle)
+		if err != nil {
+			return "", "", err
+		}
+		targetSig = []byte(b.Signature)
+	default:
+		return "", "", fmt.Errorf("missing flag '--signature' or flag '--bundle'")
+	}
+	if isb64(targetSig) {
+		b64sig = string(targetSig)
+		sigBytes, _ := base64.StdEncoding.DecodeString(b64sig)
+		sig = string(sigBytes)
+	} else {
+		sig = string(targetSig)
+		b64sigBytes, _ := base64.StdEncoding.DecodeString(b64sig)
+		b64sig = string(b64sigBytes)
+	}
+	return
+}
+
+func extractCerts(e *bundle.RekorBundle) ([]*x509.Certificate, error) {
+	b, err := base64.StdEncoding.DecodeString(e.Payload.Body.(string))
 	if err != nil {
 		return nil, err
 	}

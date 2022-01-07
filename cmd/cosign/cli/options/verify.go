@@ -119,6 +119,7 @@ type VerifyBlobOptions struct {
 	Key       string
 	Cert      string
 	Signature string
+	Bundle    string
 
 	SecurityKey SecurityKeyOptions
 	Rekor       RekorOptions
@@ -141,6 +142,9 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Signature, "signature", "",
 		"signature content or path or remote URL")
+
+	cmd.Flags().StringVar(&o.Bundle, "bundle", "",
+		"path to bundle file")
 }
 
 // VerifyBlobOptions is the top level wrapper for the `verify blob` command.
