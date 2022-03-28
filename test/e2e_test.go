@@ -1046,6 +1046,35 @@ func TestGetPublicKeyCustomOut(t *testing.T) {
 	equals(keys.PublicBytes, output, t)
 }
 
+func TestVerifyBlobExperimental(t *testing.T) {
+	ctx := context.Background()
+	td := t.TempDir()
+	// turn on the tlog
+	defer setenv(t, options.ExperimentalEnv, "1")()
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ko := sign.KeyOpts{
+		KeyRef:   privKeyPath,
+		PassFunc: passFunc,
+		RekorURL: rekorURL,
+	}
+
+	blob := "testdata/blob"
+
+	// Sign the blob
+	sig, err := sign.SignBlobCmd(ro, ko, options.RegistryOptions{}, blob, true, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Verify the blob
+	ko = sign.KeyOpts{
+		KeyRef: pubKeyPath,
+	}
+	mustErr(cliverify.VerifyBlobCmd(ctx, ko, "" /*certRef*/, "" /*certEmail*/, "" /*certOidcIssuer*/, "" /*certChain*/, string(sig), blob), t)
+
+	// Add an entry to the log which should fail verification, make sure that verification still passes
+}
+
 func mkfile(contents, td string, t *testing.T) string {
 	f, err := os.CreateTemp(td, "")
 	if err != nil {
