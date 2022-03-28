@@ -187,13 +187,16 @@ func VerifyBlobCmd(ctx context.Context, ko sign.KeyOpts, certRef, certEmail, cer
 func verifyUUIDs(ctx context.Context, ko sign.KeyOpts, rClient *client.Rekor, certEmail, certOidcIssuer, sig, b64sig string, uuids []string, blobBytes []byte) error {
 	var validUUIDs []string
 	for _, u := range uuids {
-		tlogEntry, err := cosign.GetTlogEntry(ctx, rClient, uuids[0])
+		fmt.Println(u)
+		tlogEntry, err := cosign.GetTlogEntry(ctx, rClient, u)
 		if err != nil {
+			fmt.Println("get tlog entry", err)
 			continue
 		}
 
 		certs, err := extractCerts(tlogEntry)
 		if err != nil {
+			fmt.Println("extract", err)
 			continue
 		}
 
@@ -205,6 +208,7 @@ func verifyUUIDs(ctx context.Context, ko sign.KeyOpts, rClient *client.Rekor, ce
 		cert := certs[0]
 		verifier, err := cosign.ValidateAndUnpackCert(cert, co)
 		if err != nil {
+			fmt.Println("validate unpack", err)
 			continue
 		}
 		// Use the DSSE verifier if the payload is a DSSE with the In-Toto format.
@@ -213,11 +217,13 @@ func verifyUUIDs(ctx context.Context, ko sign.KeyOpts, rClient *client.Rekor, ce
 		}
 		// verify the signature
 		if err := verifier.VerifySignature(bytes.NewReader([]byte(sig)), bytes.NewReader(blobBytes)); err != nil {
+			fmt.Println("verify", err)
 			continue
 		}
 
 		// verify the rekor entry
 		if err := verifyRekorEntry(ctx, ko, verifier, cert, b64sig, blobBytes); err != nil {
+			fmt.Println("verify rekor", err)
 			continue
 		}
 		validUUIDs = append(validUUIDs, u)
