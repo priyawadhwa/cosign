@@ -22,16 +22,16 @@ require (
 	github.com/in-toto/in-toto-golang v0.3.4-0.20211211042327-af1f9fb822bf
 	github.com/manifoldco/promptui v0.9.0
 	github.com/miekg/pkcs11 v1.1.1
-	github.com/open-policy-agent/opa v0.35.0
+	github.com/open-policy-agent/opa v0.39.0
 	github.com/pkg/errors v0.9.1
 	github.com/secure-systems-lab/go-securesystemslib v0.3.0
 	github.com/sigstore/fulcio v0.1.2-0.20220114150912-86a2036f9bc7
 	github.com/sigstore/rekor v0.4.1-0.20220114213500-23f583409af3
 	github.com/sigstore/sigstore v1.1.1-0.20220217212907-e48ca03a5ba7
-	github.com/spf13/cobra v1.3.0
+	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.10.1
 	github.com/spiffe/go-spiffe/v2 v2.0.0-beta.11
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 	github.com/theupdateframework/go-tuf v0.0.0-20220211205608-f0c3294f63b9
 	github.com/xanzy/go-gitlab v0.55.1
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
@@ -49,14 +49,12 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.13.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.14.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.11.0 // indirect
-	github.com/bytecodealliance/wasmtime-go v0.33.1 // indirect
 	github.com/google/go-containerregistry/pkg/authn/kubernetes v0.0.0-20220125170349-50dfc2733d10 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/urfave/cli v1.22.5 // indirect
 	github.com/withfig/autocomplete-tools/packages/cobra v0.0.0-20220122124547-31d3821a6898
 	go.opentelemetry.io/contrib v1.3.0 // indirect
-	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
+	go.opentelemetry.io/otel/internal/metric v0.27.0 // indirect
 	golang.org/x/crypto v0.0.0-20220213190939-1e6e3497d506 // indirect
 	k8s.io/kube-openapi v0.0.0-20220124234850-424119656bbf // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
