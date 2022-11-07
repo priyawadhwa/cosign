@@ -49,6 +49,7 @@ import (
 type VerifyCommand struct {
 	options.RegistryOptions
 	CheckClaims                  bool
+	Offline                      bool
 	KeyRef                       string
 	CertRef                      string
 	CertEmail                    string

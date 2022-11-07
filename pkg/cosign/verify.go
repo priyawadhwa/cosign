@@ -119,6 +119,9 @@ type CheckOpts struct {
 	// to be met for the signature to ve valid.
 	// Supercedes CertEmail / CertOidcIssuer
 	Identities []Identity
+
+	// Perform offline verification if set to true
+	Offline bool
 }
 
 func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig oci.Signature) error {
@@ -404,16 +407,16 @@ func ValidateAndUnpackCertWithChain(cert *x509.Certificate, chain []*x509.Certif
 	return ValidateAndUnpackCert(cert, co)
 }
 
-func tlogValidatePublicKey(ctx context.Context, rekorClient *client.Rekor, pub crypto.PublicKey, sig oci.Signature) error {
+func tlogValidatePublicKey(ctx context.Context, co *CheckOpts, pub crypto.PublicKey, sig oci.Signature) error {
 	pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(pub)
 	if err != nil {
 		return err
 	}
-	_, err = tlogValidateEntry(ctx, rekorClient, sig, pemBytes)
+	_, err = tlogValidateEntry(ctx, co, sig, pemBytes)
 	return err
 }
 
-func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig oci.Signature) error {
+func tlogValidateCertificate(ctx context.Context, co *CheckOpts, sig oci.Signature) error {
 	cert, err := sig.Cert()
 	if err != nil {
 		return err
@@ -422,7 +425,7 @@ func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig
 	if err != nil {
 		return err
 	}
-	e, err := tlogValidateEntry(ctx, rekorClient, sig, pemBytes)
+	e, err := tlogValidateEntry(ctx, co, sig, pemBytes)
 	if err != nil {
 		return err
 	}
@@ -430,7 +433,11 @@ func tlogValidateCertificate(ctx context.Context, rekorClient *client.Rekor, sig
 	return CheckExpiry(cert, time.Unix(*e.IntegratedTime, 0))
 }
 
-func tlogValidateEntry(ctx context.Context, client *client.Rekor, sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
+func tlogValidateEntry(ctx context.Context, co *CheckOpts, sig oci.Signature, pem []byte) (*models.LogEntryAnon, error) {
+	// If offline verification was specified, fail here
+	if co.Offline {
+		return nil, fmt.Errorf("can't validate tlog entry offline")
+	}
 	b64sig, err := sig.Base64Signature()
 	if err != nil {
 		return nil, err
@@ -439,7 +446,7 @@ func tlogValidateEntry(ctx context.Context, client *client.Rekor, sig oci.Signat
 	if err != nil {
 		return nil, err
 	}
-	tlogEntries, err := FindTlogEntry(ctx, client, b64sig, payload, pem)
+	tlogEntries, err := FindTlogEntry(ctx, co.RekorClient, b64sig, payload, pem)
 	if err != nil {
 		return nil, err
 	}
@@ -644,16 +651,26 @@ func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co 
 		return false, fmt.Errorf("unable to verify bundle: %w", err)
 	}
 
-	if !bundleVerified && co.RekorClient != nil {
+	if bundleVerified {
+		return bundleVerified, tlogValidateCertificate(ctx, co, sig)
+	}
+
+	// If offline verification was specified, fail here
+	if co.Offline {
+		return false, fmt.Errorf("offline verification failed")
+	}
+
+	// Otherwise, attempt online verification
+	if co.RekorClient != nil {
 		if co.SigVerifier != nil {
 			pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
 			if err != nil {
 				return bundleVerified, err
 			}
-			return bundleVerified, tlogValidatePublicKey(ctx, co.RekorClient, pub, sig)
+			return bundleVerified, tlogValidatePublicKey(ctx, co, pub, sig)
 		}
 
-		return bundleVerified, tlogValidateCertificate(ctx, co.RekorClient, sig)
+		return bundleVerified, tlogValidateCertificate(ctx, co, sig)
 	}
 
 	return bundleVerified, nil
@@ -843,10 +860,10 @@ func verifyImageAttestations(ctx context.Context, atts oci.Signatures, h v1.Hash
 					if err != nil {
 						return err
 					}
-					return tlogValidatePublicKey(ctx, co.RekorClient, pub, att)
+					return tlogValidatePublicKey(ctx, co, pub, att)
 				}
 
-				return tlogValidateCertificate(ctx, co.RekorClient, att)
+				return tlogValidateCertificate(ctx, co, att)
 			}
 			return nil
 		}(att); err != nil {
