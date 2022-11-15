@@ -27,7 +27,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
-	"github.com/sigstore/cosign/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/pkg/cosign"
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
@@ -63,11 +62,7 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		ClaimVerifier:      cosign.SimpleClaimVerifier,
 		RegistryClientOpts: []ociremote.Option{ociremote.WithRemoteOptions(opts...)},
 	}
-	if _, ok := ref.(name.Tag); ok {
-		if sg.KeyRef == "" && !options.EnableExperimental() {
-			return errors.New("public key must be specified when fetching by tag, you must fetch by digest or supply a public key")
-		}
-	}
+
 	// Overwrite "ref" with a digest to avoid a race where we verify the tag,
 	// and then access the file through the tag.  This has a race where we
 	// might download content that isn't what we verified.
@@ -84,30 +79,28 @@ func (sg *SecureGet) Do(ctx context.Context) error {
 		co.SigVerifier = pub
 	}
 
-	if co.SigVerifier != nil || options.EnableExperimental() {
-		// NB: There are only 2 kinds of verification right now:
-		// 1. You gave us the public key explicitly to verify against so co.SigVerifier is non-nil or,
-		// 2. We're going to find an x509 certificate on the signature and verify against Fulcio root trust
-		// TODO(nsmith5): Refactor this verification logic to pass back _how_ verification
-		// was performed so we don't need to use this fragile logic here.
-		fulcioVerified := (co.SigVerifier == nil)
+	// NB: There are only 2 kinds of verification right now:
+	// 1. You gave us the public key explicitly to verify against so co.SigVerifier is non-nil or,
+	// 2. We're going to find an x509 certificate on the signature and verify against Fulcio root trust
+	// TODO(nsmith5): Refactor this verification logic to pass back _how_ verification
+	// was performed so we don't need to use this fragile logic here.
+	fulcioVerified := (co.SigVerifier == nil)
 
-		co.RootCerts, err = fulcio.GetRoots()
-		if err != nil {
-			return fmt.Errorf("getting Fulcio roots: %w", err)
-		}
-		co.IntermediateCerts, err = fulcio.GetIntermediates()
-		if err != nil {
-			return fmt.Errorf("getting Fulcio intermediates: %w", err)
-		}
-
-		sp, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
-		if err != nil {
-			return err
-		}
-		verify.PrintVerificationHeader(sg.ImageRef, co, bundleVerified, fulcioVerified)
-		verify.PrintVerification(sg.ImageRef, sp, "text")
+	co.RootCerts, err = fulcio.GetRoots()
+	if err != nil {
+		return fmt.Errorf("getting Fulcio roots: %w", err)
 	}
+	co.IntermediateCerts, err = fulcio.GetIntermediates()
+	if err != nil {
+		return fmt.Errorf("getting Fulcio intermediates: %w", err)
+	}
+
+	sp, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
+	if err != nil {
+		return err
+	}
+	verify.PrintVerificationHeader(sg.ImageRef, co, bundleVerified, fulcioVerified)
+	verify.PrintVerification(sg.ImageRef, sp, "text")
 
 	// TODO(mattmoor): Depending on what this is, use the higher-level stuff.
 	img, err := remote.Image(ref, opts...)
