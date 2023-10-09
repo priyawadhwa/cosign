@@ -36,7 +36,7 @@ require (
 	github.com/spiffe/go-spiffe/v2 v2.1.1
 	github.com/stretchr/testify v1.8.1
 	github.com/theupdateframework/go-tuf v0.5.2-0.20220930112810-3890c1e7ace4
-	github.com/transparency-dev/merkle v0.0.1
+	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	github.com/xanzy/go-gitlab v0.74.0
 	golang.org/x/crypto v0.2.0
