@@ -40,7 +40,7 @@ require (
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	github.com/xanzy/go-gitlab v0.74.0
 	golang.org/x/crypto v0.2.0
-	golang.org/x/oauth2 v0.1.0
+	golang.org/x/oauth2 v0.20.0
 	golang.org/x/sync v0.1.0
 	golang.org/x/term v0.2.0
 	google.golang.org/api v0.103.0
@@ -52,8 +52,7 @@ require (
 )
 
 require (
-	cloud.google.com/go/compute v1.12.1 // indirect
-	cloud.google.com/go/compute/metadata v0.2.1 // indirect
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	cloud.google.com/go/iam v0.6.0 // indirect
 	cloud.google.com/go/kms v1.6.0 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
